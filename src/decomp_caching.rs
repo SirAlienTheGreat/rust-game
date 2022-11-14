@@ -1,8 +1,8 @@
-
-
 pub(crate) mod decomp_caching {
     use std::io::Write;
-    use std::{path::Path, fs::File, io::Read};
+    use std::{path::Path, fs::File};
+    #[cfg(feature="check-local-cache")]
+    use std::io::Read;
     use bevy::prelude::Vec3;
     use bevy::utils::default;
     use serde::{Serialize, Deserialize};
@@ -28,9 +28,8 @@ pub(crate) mod decomp_caching {
     /**
      * Checks to see if a convex collider has already been decomposed. If it has been, the existing decomposition is returned. If not, the new decomposition is calculated and returned
      */
-    pub(crate) fn decompose(vertices: Vec<Vec3>, indices: Box<[[u32;3]]>) -> RenderedDecomp {
+    pub(crate) fn decompose(vertices: Vec<Vec3>, indices: Box<[[u32;3]]>, cache:&mut Vec<RenderedDecomp>) -> RenderedDecomp {
 
-        let cache = load_cache();
 
         match check_if_already_in_list(&vertices, &indices,&cache) {
             Some(item) => return item,
@@ -39,7 +38,7 @@ pub(crate) mod decomp_caching {
                 
 
                 //let indices = indices.clone();
-                let decomposition = Collider::convex_decomposition_with_params(&vertices, &indices, &bevy_rapier3d::prelude::VHACDParameters { concavity:0.005, ..default() });
+                let decomposition = Collider::convex_decomposition_with_params(&vertices, &indices, &bevy_rapier3d::prelude::VHACDParameters { concavity:0.01, max_convex_hulls:2048, resolution:265, ..default() });
 
                 //let indeces = Box::new(indices);
                 
@@ -53,7 +52,7 @@ pub(crate) mod decomp_caching {
         };
     }
 
-    fn add_to_cache(item:RenderedDecomp, mut current_cache:Vec<RenderedDecomp>){
+    fn add_to_cache(item:RenderedDecomp, current_cache:&mut Vec<RenderedDecomp>){
         let path = Path::new("assets/cache.bin");
         let display = path.display();
 
@@ -92,15 +91,30 @@ pub(crate) mod decomp_caching {
         return None
     }
 
-    fn load_cache() -> Vec<RenderedDecomp>{
+    pub(crate) fn load_cache() -> Vec<RenderedDecomp>{
         // Open the cache file
+
+        
+
+        let embed_cache:Vec<RenderedDecomp> = bincode::deserialize(include_bytes!("../assets/cache.bin")).unwrap_or(vec![]);
+
+        #[cfg(feature= "check-local-cache")]
+        {
+            let mut embed_cache = embed_cache;
+            add_new_cache(&mut embed_cache);
+            return embed_cache;
+        }
+
+        return embed_cache
+    }
+
+    #[cfg(feature= "check-local-cache")]
+    fn add_new_cache(old_cache:&mut Vec<RenderedDecomp>){
+        let mut local_cache;
+        println!("checking local cache");
 
         let path = Path::new("assets/cache.bin");
         let display = path.display();
-
-        let mut embed_cache:Vec<RenderedDecomp> = bincode::deserialize(include_bytes!("../assets/cache.bin")).unwrap_or(vec![]);
-
-        let mut local_cache;
 
         // Open the path in read-only mode, returns `io::Result<File>`
         match File::open(&path) {
@@ -122,11 +136,9 @@ pub(crate) mod decomp_caching {
             },
         };
 
-        local_cache.append(&mut embed_cache);
+        old_cache.append(&mut local_cache);
+        old_cache.dedup();
 
-        local_cache.dedup();
-
-        return  local_cache
     }
 
 }
