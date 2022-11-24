@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::PresentMode, pbr::PbrPlugin};
+use bevy::{prelude::*, window::{PresentMode, CursorGrabMode}, pbr::PbrPlugin};
 #[cfg(feature="use-ray-tracing")]
 use bevy_hikari::HikariPlugin;
 use smooth_bevy_cameras::{LookTransform, LookTransformPlugin};
@@ -8,7 +8,7 @@ use bevy_atmosphere::prelude::*;
 mod decomp_caching;
 mod setup_world;
 mod movement;
-
+mod skybox;
 
 // Convex decomposition
 
@@ -19,21 +19,22 @@ fn main() {
 
     let mut app = App::new();
 
-    app .insert_resource(WindowDescriptor {
-            title: "Rust is the future of programming!".to_string(),
-            width: 1920.,
-            height: 1080.,
-            present_mode: PresentMode::AutoVsync,
+    app .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
+        .add_plugins(DefaultPlugins.set(WindowPlugin{
+            window: WindowDescriptor {
+                title: "Rust is the future of programming!".to_string(),
+                width: 1920.,
+                height: 1080.,
+                present_mode: PresentMode::AutoVsync,
+                ..default()
+            },
             ..default()
-        })
-        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
-        .add_plugins(DefaultPlugins)
-        .add_plugin(PbrPlugin)
-        .add_plugin(AtmospherePlugin)
-        .insert_resource(Atmosphere {
+        }))
+        //.add_plugin(PbrPlugin)
+        /*.insert_resource(Atmosphere {
             rayleigh_coefficient: Vec3::new(1.2e-7, 1.2e-7, 1.2e-7),
             ..default()
-        })
+        })*/
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         //.add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(LookTransformPlugin)
@@ -52,7 +53,12 @@ fn main() {
         .add_system(move_scene_entities)
 
         .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
-        .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default());
+        .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
+
+        .add_plugin(MaterialPlugin::<skybox::skybox::CubemapMaterial>::default())
+        .add_startup_system(skybox::skybox::setup_cubebox)
+        .add_system(skybox::skybox::cycle_cubemap_asset)
+        .add_system(skybox::skybox::asset_loaded.after(skybox::skybox::cycle_cubemap_asset));
 
     #[cfg(feature="use-ray-tracing")]
     {app.add_plugin(HikariPlugin);}
@@ -65,7 +71,7 @@ fn main() {
 fn doing_the_wave(time: Res<Time>, mut query: Query<&mut Transform, With<setup_world::setup_objects::Moving>>){
 
     for mut transform in &mut query{
-        let x_pos:f32 = (time.seconds_since_startup() / 5.0).sin() as f32;
+        let x_pos:f32 = (time.elapsed_seconds() / 5.0).sin() as f32;
         transform.rotate_x(0.3*time.delta_seconds());
         //let forward = transform.forward();
         transform.translation = Vec3{
@@ -102,12 +108,14 @@ fn cursor_grab_system(
     let window = windows.get_primary_mut().unwrap();
 
     if btn.just_pressed(MouseButton::Left) {
-        window.set_cursor_lock_mode(true);
+        println!("grabbing mouse");
+        window.set_cursor_grab_mode(CursorGrabMode::Locked);
         window.set_cursor_visibility(false);
     }
 
     if key.just_pressed(KeyCode::Escape) {
-        window.set_cursor_lock_mode(false);
+        println!("ungrabbing mouse");
+        window.set_cursor_grab_mode(CursorGrabMode::None);
         window.set_cursor_visibility(true);
     }
 }
@@ -123,12 +131,12 @@ fn spawn_gltf_objects(
     ass: Res<AssetServer>,
 ) {
     println!("making objects");
-    let gltf_h = ass.load("11-4-22_voxel_tree_setting.glb#Scene0");
+    let gltf_h = ass.load("11-8-22_voxel_cave_setting_v2.glb#Scene0");
     let scene = SceneBundle {
         scene: gltf_h,
         ..Default::default()
     };
-    commands.spawn_bundle(scene).insert(MakeHitboxes)
+    commands.spawn(scene).insert(MakeHitboxes)
        .insert(Transform::from_scale(Vec3{x:0.2,y:0.2,z:0.2}).with_translation(Vec3{x:6.0,y:-50.0,z:0.0}));
     println!("made objects");
     /*for i in 0..1 {
@@ -188,7 +196,11 @@ fn move_scene_entities(
                     
 
                     let decomposition = decomp_caching::decomp_caching::decompose(vertices, indices.into(), &mut cache);
-                    decompositions.push((entity,decomposition));
+                    match decomposition {
+                        Some(decomp) => decompositions.push((entity,decomp)),
+                        None => println!("couldn't decompose shape"),
+                    }
+                    
 
                     //commands.entity(entity).insert(decomposition);
 

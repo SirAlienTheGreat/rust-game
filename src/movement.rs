@@ -116,12 +116,14 @@ pub(crate) mod movement {
                         gamepad, axis_type: GamepadAxisType::RightStickY
                     };
                     let c_y = axes.get(axis_ry).unwrap_or(0.0_f32);
-
-                    if c_y> 0.0 && player_info.v_theta < 0.45*std::f32::consts::PI {
-                        player_info.v_theta +=  2.0 * c_y * time.delta_seconds();
-                    }
-                    if c_y < 0.0 && player_info.v_theta > 0.0 {
-                        player_info.v_theta +=  2.0 * c_y * time.delta_seconds();
+                    
+                    if c_y.abs() >= DEADZONE{
+                        if c_y> 0.0 && player_info.v_theta < 0.45*std::f32::consts::PI {
+                            player_info.v_theta +=  2.0 * c_y * time.delta_seconds();
+                        }
+                        if c_y < 0.0 && player_info.v_theta > 0.0 {
+                            player_info.v_theta +=  2.0 * c_y * time.delta_seconds();
+                        }
                     }
                 
                     // Jumping
@@ -240,16 +242,15 @@ pub(crate) mod movement {
             if player_info.v_theta > 0.45*std::f32::consts::PI{
                 player_info.v_theta = 0.45*std::f32::consts::PI;
             }
-
-            println!("v_theta is {}",player_info.v_theta);
    
         }
 
     }
 
+    #[derive(Resource)]
     pub(crate) struct MyGamepad(Gamepad);
 
-    pub(crate) fn gamepad_connections(
+    /*pub(crate) fn gamepad_connections(
         mut commands: Commands,
         my_gamepad: Option<Res<MyGamepad>>,
         mut gamepad_evr: EventReader<GamepadEvent>,
@@ -281,6 +282,41 @@ pub(crate) mod movement {
                 _ => {}
             }
         }
+    }*/
+
+    pub(crate) fn gamepad_connections(
+        mut commands: Commands,
+        my_gamepad: Option<Res<MyGamepad>>,
+        mut gamepad_evr: EventReader<GamepadEvent>,
+    ) {
+        for ev in gamepad_evr.iter() {
+            // the ID of the gamepad
+            let id = ev.gamepad;
+            match &ev.event_type {
+                GamepadEventType::Connected(info) => {
+                    println!("New gamepad connected with ID: {:?}, name: {}", id, info.name);
+    
+                    // if we don't have any gamepad yet, use this one
+                    if my_gamepad.is_none() {
+                        commands.insert_resource(MyGamepad(id));
+                    }
+                }
+                GamepadEventType::Disconnected => {
+                    println!("Lost gamepad connection with ID: {:?}", id);
+    
+                    // if it's the one we previously associated with the player,
+                    // disassociate it:
+                    if let Some(MyGamepad(old_id)) = my_gamepad.as_deref() {
+                        if *old_id == id {
+                            commands.remove_resource::<MyGamepad>();
+                        }
+                    }
+                }
+                // other events are irrelevant
+                _ => {}
+            }
+        }
     }
+    
 
 }

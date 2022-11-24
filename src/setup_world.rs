@@ -1,15 +1,14 @@
 pub(crate) mod setup_objects{
     use bevy_rapier3d::prelude::*;    
-    use bevy::prelude::*;
+    use bevy::{prelude::*, core_pipeline::bloom::BloomSettings};
     use rand::prelude::*;
-    use bevy_atmosphere::prelude::*;
 
     #[cfg(feature="use-ray-tracing")]
     use bevy::render::camera::CameraRenderGraph;
 
     use smooth_bevy_cameras::{LookTransform, LookTransformBundle, Smoother};
 
-    const WORLD_SIZE:f32 = 300.0;
+    const WORLD_SIZE:f32 = 100.0;
 
     #[derive(Component)]
     pub(crate) struct Moving;
@@ -35,7 +34,7 @@ pub(crate) mod setup_objects{
         mut meshes: ResMut<Assets<Mesh>>,
         mut materials: ResMut<Assets<StandardMaterial>>) {
         // plane
-        /*commands.spawn_bundle(PbrBundle {
+        /*commands.spawn(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Plane { size: 2.0*WORLD_SIZE })),
             material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
             transform: Transform::from_xyz(0.0, -0.5, 0.0),
@@ -45,18 +44,18 @@ pub(crate) mod setup_objects{
         //walls 
         for i in [-1.0,1.0] {
             commands
-                .spawn()
+                .spawn_empty()
                 .insert(Collider::cuboid(0.1, 100.0, 100.0))
-                .insert_bundle(TransformBundle::from(Transform::from_xyz(i* WORLD_SIZE, 0.0, 0.0)));
+                .insert(TransformBundle::from(Transform::from_xyz(i* WORLD_SIZE, 0.0, 0.0)));
             
             commands
-                .spawn()
+                .spawn_empty()
                 .insert(Collider::cuboid(100.0, 100.0, 0.1))
-                .insert_bundle(TransformBundle::from(Transform::from_xyz(0.0, 0.0, i* WORLD_SIZE)));
+                .insert(TransformBundle::from(Transform::from_xyz(0.0, 0.0, i* WORLD_SIZE)));
         }
 
         // player cube
-        commands.spawn_bundle(PbrBundle {
+        commands.spawn(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Cube { size:1.0 })),
             material: materials.add(StandardMaterial { 
                 base_color: Color::GRAY, 
@@ -80,7 +79,7 @@ pub(crate) mod setup_objects{
                 torque: Vec3{ x: 0.0, y: 0.0, z: 0.0 },
             })
             .with_children(|parent|{
-                parent.spawn_bundle(PointLightBundle{
+                parent.spawn(PointLightBundle{
                     point_light:PointLight{
                         color:Color::YELLOW,
                         radius:0.01,
@@ -96,7 +95,7 @@ pub(crate) mod setup_objects{
             });
 
         // moving cube
-        commands.spawn_bundle(PbrBundle {
+        commands.spawn(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
             material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
             transform: Transform::from_xyz(0.0, 0.5, 1.5),
@@ -106,8 +105,8 @@ pub(crate) mod setup_objects{
 
         // balls
         let mut rng = rand::thread_rng();
-        for _ in 0..10 {
-            commands.spawn_bundle(PbrBundle {
+        /*for _ in 0..10 {
+            commands.spawn(PbrBundle {
                 mesh: meshes.add(Mesh::from(shape::UVSphere { radius: 0.5, sectors: 10, stacks:10  })),
                 material: materials.add(StandardMaterial { base_color: Color::GRAY, emissive: Color::DARK_GRAY, unlit:false, ..default() }),
                 transform: Transform::from_xyz(
@@ -119,26 +118,35 @@ pub(crate) mod setup_objects{
                 .insert(RigidBody::Dynamic)
                 .insert(Collider::ball(0.5))
                 .insert(Restitution::coefficient(0.7));
-        }
-        // lights
-
-        /*for _ in 0..8{
-            commands.spawn_bundle(PointLightBundle {
-                point_light: PointLight {
-                    intensity: 1500.0,
-                    shadows_enabled: true,
-                    ..default()
-                },
-                transform: Transform::from_xyz( 
-                    rng.gen::<f32>() * WORLD_SIZE *2.0 - WORLD_SIZE, 
-                    8.0, 
-                    rng.gen::<f32>() * WORLD_SIZE *2.0 - WORLD_SIZE),
-                ..default()
-            });
         }*/
+
+        // lights
+        for i in 0..4{
+            commands.spawn(PbrBundle {
+                mesh: meshes.add(Mesh::from(shape::UVSphere { radius: 0.5, sectors: 10, stacks:10  })),
+                transform: Transform::from_xyz( 
+                    i as f32 * 15.0, 
+                    -35.0, 
+                    0.0),
+                    ..default()
+            }).with_children(|parent|{
+                parent.spawn(PointLightBundle {
+                    point_light: PointLight {
+                        intensity: 10.0,
+                        radius: 1.0,
+                        shadows_enabled: true,
+                        color: Color::hsla(i as f32*17.9, 100.0, 0.05, 0.0001),
+                        ..default()
+                    },
+                    
+                    ..default()
+                });
+            });
+            
+        }
         
         #[cfg(feature="use-ray-tracing")]
-        commands.spawn_bundle(DirectionalLightBundle {
+        commands.spawn(DirectionalLightBundle {
             directional_light: DirectionalLight {
                 color: Color::rgb(255.0,255.0,255.0),
                 illuminance: 1.0,
@@ -157,7 +165,7 @@ pub(crate) mod setup_objects{
         });*/
 
         // Sun
-        commands.spawn_bundle(DirectionalLightBundle {
+        commands.spawn(DirectionalLightBundle {
             directional_light: DirectionalLight {
                 // Configure the projection to better fit the scene
                 shadow_projection: OrthographicProjection {
@@ -186,7 +194,7 @@ pub(crate) mod setup_objects{
         let init_x = rng.gen::<f32>()* 2.0* WORLD_SIZE- WORLD_SIZE;
 
         for i in 0..3 {
-            commands.spawn_bundle(PbrBundle {
+            commands.spawn(PbrBundle {
                 mesh: meshes.add(Mesh::from(shape::Box { 
                     min_x: -2.5, 
                     max_x: 2.5, 
@@ -201,7 +209,7 @@ pub(crate) mod setup_objects{
                 .insert(Collider::cuboid(2.5, 0.5, 2.5));
         }
 
-        commands.spawn_bundle(PbrBundle {
+        commands.spawn(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Box { 
                 min_x: -9.0, 
                 max_x: 9.0, 
@@ -215,7 +223,7 @@ pub(crate) mod setup_objects{
         }) //.insert(Moving)
             .insert(Collider::cuboid(9.0, 2.5, 0.5));
 
-        commands.spawn_bundle(PbrBundle {
+        commands.spawn(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Box { 
                 min_x: -9.0, 
                 max_x: 9.0, 
@@ -233,15 +241,22 @@ pub(crate) mod setup_objects{
         let target = Vec3::default();
 
         commands
-            .spawn_bundle(LookTransformBundle {
+            .spawn(LookTransformBundle {
                 transform: LookTransform::new(eye, target),
                 smoother: Smoother::new(0.9), // Value between 0.0 and 1.0, higher is smoother.
             })
-            .insert_bundle(Camera3dBundle{
+            .insert((Camera3dBundle{
                 #[cfg(feature="use-ray-tracing")]
                 camera_render_graph: CameraRenderGraph::new(bevy_hikari::graph::NAME),
+                camera:Camera { 
+                    hdr: true, 
+                    ..default() 
+                },
                 ..default()
-            }).insert(AtmosphereCamera(None));
+            }, BloomSettings{
+                intensity: 0.5,
+                ..default()
+            }));
     }
 
     pub(crate) fn point_things_at_player(
