@@ -1,17 +1,14 @@
-use bevy::{prelude::*, window::{PresentMode, CursorGrabMode}, pbr::PbrPlugin};
+use bevy::{prelude::*, window::{PresentMode, CursorGrabMode}};
 #[cfg(feature="use-ray-tracing")]
 use bevy_hikari::HikariPlugin;
 use smooth_bevy_cameras::{LookTransform, LookTransformPlugin};
 use bevy_rapier3d::prelude::*;
-use bevy_atmosphere::prelude::*;
+use bevy_embedded_assets::EmbeddedAssetPlugin;
 
 mod decomp_caching;
 mod setup_world;
 mod movement;
 mod skybox;
-
-// Convex decomposition
-
 
 
 fn main() {
@@ -29,12 +26,9 @@ fn main() {
                 ..default()
             },
             ..default()
-        }))
+        })  .build()
+            .add_before::<bevy::asset::AssetPlugin, _>(EmbeddedAssetPlugin),)
         //.add_plugin(PbrPlugin)
-        /*.insert_resource(Atmosphere {
-            rayleigh_coefficient: Vec3::new(1.2e-7, 1.2e-7, 1.2e-7),
-            ..default()
-        })*/
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         //.add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(LookTransformPlugin)

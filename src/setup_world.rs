@@ -249,6 +249,8 @@ pub(crate) mod setup_objects{
                 #[cfg(feature="use-ray-tracing")]
                 camera_render_graph: CameraRenderGraph::new(bevy_hikari::graph::NAME),
                 camera:Camera { 
+                    // HDR (needed for bloom) doesn't seem to work for WASM, so its disabled when on WASM
+                    #[cfg(not(target_arch = "wasm32"))]
                     hdr: true, 
                     ..default() 
                 },
