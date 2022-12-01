@@ -1,14 +1,14 @@
 [package]
 name = "rust-game"
-version = "0.2.0"
+version = "1.0.0"
 edition = "2021"
 resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { version = "0.9.0", features = ["jpeg"]}
 bevy_rapier3d = { version = "0.19.0", features = [ "simd-stable", "debug-render", "serde-serialize", "wasm-bindgen" ] }
+bevy_kira_audio = {version = "0.13.0", features = ["mp3", "wav"]}
 rand = "0.8.5"
 smooth-bevy-cameras = "0.6.0"
 serde = "1.0.147"
@@ -21,6 +21,38 @@ crossbeam-channel = "0.5.6"
 bevy-hikari = {version="0.3.1", optional=true}
 bevy_atmosphere = "0.4.1"
 bevy_embedded_assets = "0.6.1"
+
+[dependencies.bevy]
+version = "0.9"
+default-features = false
+features = [
+  # Bevy functionality:
+  "bevy_asset",         # Assets management
+  "bevy_gilrs",         # Gamepad input support
+  "bevy_winit",         # Window management
+  "x11",                # Linux: Support X11 windowing system
+  "filesystem_watcher", # Asset hot-reloading
+  "render",             # Graphics Rendering
+
+  ## "render" actually just includes:
+  ## (feel free to use just a subset of these, instead of "render")
+  "bevy_render",        # Rendering framework core
+  "bevy_core_pipeline", # Common rendering abstractions
+  "bevy_pbr",           # 3D (physically-based) rendering
+  "bevy_gltf",          # GLTF 3D assets format support
+
+  # File formats:
+  "png",
+
+  # These are other features that may be of interest:
+  # (add any of these that you need)
+
+  # Bevy functionality:
+  "wayland",              # Linux: Support Wayland windowing system
+
+  # File formats:
+  "jpeg",
+]
 
 [features]
 dyn = ["bevy/dynamic"]
