@@ -8,6 +8,7 @@ pub(crate) mod decomp_caching {
     use serde::{Serialize, Deserialize};
     use bevy_rapier3d::rapier::prelude::SharedShape;
     use bevy_rapier3d::geometry::Collider;
+    use bevy::log::info;
 
     #[derive(Serialize, Deserialize, Clone)]
     pub(crate) struct RenderedDecomp {
@@ -34,7 +35,7 @@ pub(crate) mod decomp_caching {
         match check_if_already_in_list(&vertices, &indices,&cache) {
             Some(item) => return Some(item),
             None => {
-                println!("New item! About to decompose shape with {} ",vertices.len());
+                info!("New item! About to decompose shape with {} ",vertices.len());
                 
                 let decomposition;
                 //let indices = indices.clone();

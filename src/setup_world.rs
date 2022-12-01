@@ -5,6 +5,8 @@ pub(crate) mod setup_objects{
 
     #[cfg(feature="use-ray-tracing")]
     use bevy::render::camera::CameraRenderGraph;
+    #[cfg(feature="use-ray-tracing")]
+    use bevy_hikari::HikariSettings;
 
     use smooth_bevy_cameras::{LookTransform, LookTransformBundle, Smoother};
 
@@ -121,13 +123,21 @@ pub(crate) mod setup_objects{
         }*/
 
         // lights
-        for i in 0..4{
+        for (x,y,z, h) in [
+                (5.0, -38.0, 13.0, 100.0), 
+                (17.8, -45.1, 30.9, 311.0), 
+                (17.35, -45.1, 39.5, 311.0), 
+                (9.7, -45.1, 54.6, 311.0),
+                (1.35, -45.1, 54.15, 311.0), 
+                (-8.9, -45.1, 39.15, 311.0), 
+                (-8.3, -45.1, 30.3, 311.0)]{
             commands.spawn(PbrBundle {
                 mesh: meshes.add(Mesh::from(shape::UVSphere { radius: 0.5, sectors: 10, stacks:10  })),
+                material: materials.add(Color::hsla(h, 100.0, 0.05, 0.7).into()),
                 transform: Transform::from_xyz( 
-                    i as f32 * 15.0, 
-                    -35.0, 
-                    0.0),
+                    x, 
+                    y, 
+                    z),
                     ..default()
             }).with_children(|parent|{
                 parent.spawn(PointLightBundle {
@@ -135,7 +145,7 @@ pub(crate) mod setup_objects{
                         intensity: 10.0,
                         radius: 1.0,
                         shadows_enabled: true,
-                        color: Color::hsla(i as f32*17.9, 100.0, 0.05, 0.0001),
+                        color: Color::hsla(h, 100.0, 0.05, 0.0001),
                         ..default()
                     },
                     
@@ -149,7 +159,7 @@ pub(crate) mod setup_objects{
         commands.spawn(DirectionalLightBundle {
             directional_light: DirectionalLight {
                 color: Color::rgb(255.0,255.0,255.0),
-                illuminance: 1.0,
+                illuminance: 0.001,
                 shadows_enabled: true,
 
                 ..default()
@@ -246,8 +256,7 @@ pub(crate) mod setup_objects{
                 smoother: Smoother::new(0.9), // Value between 0.0 and 1.0, higher is smoother.
             })
             .insert((Camera3dBundle{
-                #[cfg(feature="use-ray-tracing")]
-                camera_render_graph: CameraRenderGraph::new(bevy_hikari::graph::NAME),
+                
                 camera:Camera { 
                     // HDR (needed for bloom) doesn't seem to work for WASM, so its disabled when on WASM
                     #[cfg(not(target_arch = "wasm32"))]
@@ -258,7 +267,10 @@ pub(crate) mod setup_objects{
             }, BloomSettings{
                 intensity: 0.5,
                 ..default()
-            }));
+            },
+            #[cfg(feature="use-ray-tracing")]
+            HikariSettings::default(),
+            ));
     }
 
     pub(crate) fn point_things_at_player(

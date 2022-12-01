@@ -4,6 +4,7 @@ use bevy_hikari::HikariPlugin;
 use smooth_bevy_cameras::{LookTransform, LookTransformPlugin};
 use bevy_rapier3d::prelude::*;
 use bevy_embedded_assets::EmbeddedAssetPlugin;
+use bevy_kira_audio::prelude::*;
 
 mod decomp_caching;
 mod setup_world;
@@ -52,15 +53,24 @@ fn main() {
         .add_plugin(MaterialPlugin::<skybox::skybox::CubemapMaterial>::default())
         .add_startup_system(skybox::skybox::setup_cubebox)
         .add_system(skybox::skybox::cycle_cubemap_asset)
-        .add_system(skybox::skybox::asset_loaded.after(skybox::skybox::cycle_cubemap_asset));
+        .add_system(skybox::skybox::asset_loaded.after(skybox::skybox::cycle_cubemap_asset))
+        .add_plugin(AudioPlugin)
+        .add_startup_system(start_background_audio);
 
     #[cfg(feature="use-ray-tracing")]
-    {app.add_plugin(HikariPlugin);}
+    {app.add_plugin(HikariPlugin {
+        remove_main_pass: true,
+    });}
 
     app.run();
 }
 // struct that indicates that item will move as sin wave
 
+fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<bevy_kira_audio::Audio>) {
+    audio.play(asset_server.load("Glimpsing-Infinity-Asher-Fulero.mp3")).looped().with_volume(0.25);
+    
+    println!("playing audio")
+}
 
 fn doing_the_wave(time: Res<Time>, mut query: Query<&mut Transform, With<setup_world::setup_objects::Moving>>){
 
@@ -103,7 +113,7 @@ fn cursor_grab_system(
 
     if btn.just_pressed(MouseButton::Left) {
         println!("grabbing mouse");
-        window.set_cursor_grab_mode(CursorGrabMode::Locked);
+        window.set_cursor_grab_mode(CursorGrabMode::Confined);
         window.set_cursor_visibility(false);
     }
 
@@ -113,6 +123,7 @@ fn cursor_grab_system(
         window.set_cursor_visibility(true);
     }
 }
+
 
 /// set up a simple 3D scene
 
@@ -124,15 +135,15 @@ fn spawn_gltf_objects(
     mut commands: Commands,
     ass: Res<AssetServer>,
 ) {
-    println!("making objects");
-    let gltf_h = ass.load("11-8-22_voxel_cave_setting_v2.glb#Scene0");
+    let gltf_h = ass.load("11-18-22_full_asembly_metallic_test.glb#Scene0");
+
     let scene = SceneBundle {
         scene: gltf_h,
         ..Default::default()
     };
     commands.spawn(scene).insert(MakeHitboxes)
        .insert(Transform::from_scale(Vec3{x:0.2,y:0.2,z:0.2}).with_translation(Vec3{x:6.0,y:-50.0,z:0.0}));
-    println!("made objects");
+
     /*for i in 0..1 {
         let gltf_h2 = ass.load("claw.glb#Scene0");
         let scene2 = SceneBundle {

@@ -5,6 +5,7 @@ pub(crate) mod movement {
     use bevy::input::mouse::MouseMotion;
     use bevy::{prelude::*};
     use bevy_rapier3d::prelude::*;
+    use bevy_kira_audio::prelude::*;
 
     use crate::setup_world;
 
@@ -18,10 +19,11 @@ pub(crate) mod movement {
             my_gamepad: Option<Res<MyGamepad>>,
             mut collision_events: EventReader<CollisionEvent>,
             rapier_context: Res<RapierContext>,
+            audio: Res<bevy_kira_audio::Audio>,
+            asset_server: Res<AssetServer>,
             ){
 
         for  (mut player_info, mut velocity, entity) in &mut query{
-
             // slowing down
             velocity.linvel.x = velocity.linvel.x/2.0;
             velocity.linvel.z = velocity.linvel.z/2.0;
@@ -37,10 +39,10 @@ pub(crate) mod movement {
                 player_info.has_hit_object = true;
             }
             for i in collision_events.iter() {
-                println!("Collision event: {:?}",i);
                 match i {
                     CollisionEvent::Started(_, _, _) => {
                         player_info.objects_hit+=1;
+                        let _ = audio.play(asset_server.load("thump.wav"));
                     },
                     CollisionEvent::Stopped(_,_, _) => {
                         player_info.objects_hit-=1;
@@ -134,6 +136,7 @@ pub(crate) mod movement {
                     if buttons.pressed(jump_button) && player_info.objects_hit >=1{
                         velocity.linvel.y = 10.0;
                         player_info.has_hit_object = false;
+                        let _ = audio.play(asset_server.load("jumping.wav"));
                     }
 
                     // Fast fall
@@ -208,6 +211,7 @@ pub(crate) mod movement {
             if keyboard_input.pressed(KeyCode::Space) && player_info.objects_hit >=1{
                 velocity.linvel.y = 10.0;
                 player_info.has_hit_object = false;
+                let _ = audio.play(asset_server.load("jumping.wav"));
             
             }
 
