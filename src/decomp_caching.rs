@@ -40,7 +40,7 @@ pub(crate) mod decomp_caching {
                 let decomposition;
                 //let indices = indices.clone();
 
-                if vertices.len() < 4 || vertices.len() == 44{
+                if vertices.len() < 4 {
                     return None
                 } else if vertices.len() == 4 || check_if_flat(&vertices){
                     println!("using convex_hull on item with {} vertices",vertices.len());
@@ -48,7 +48,7 @@ pub(crate) mod decomp_caching {
                 } else{
                     //let x = vertices.iter().map(|a|{return format!("Point A 1::{}::{}::{}::19465.17::13::A::0::0::0::1::0;", a.x, a.y, a.z)});
                     //println!("vertices: {:?}", x.collect::<String>());
-                    decomposition = Collider::convex_decomposition_with_params(&vertices, &indices, &bevy_rapier3d::prelude::VHACDParameters { concavity:0.005, max_convex_hulls:2048*10, resolution:256, ..default() });
+                    decomposition = Collider::convex_decomposition_with_params(&vertices, &indices, &bevy_rapier3d::prelude::VHACDParameters { concavity:0.001, max_convex_hulls:2048*10, resolution:256, ..default() });
                 }
 
                 //let indeces = Box::new(indices);
@@ -134,7 +134,7 @@ pub(crate) mod decomp_caching {
 
         
 
-        let embed_cache:Vec<RenderedDecomp> = bincode::deserialize(include_bytes!("../assets/cache.bin")).unwrap_or(vec![]);
+        let embed_cache:Vec<RenderedDecomp> = bincode::deserialize(include_bytes!("../cache.bin")).unwrap_or(vec![]);
 
         #[cfg(feature= "check-local-cache")]
         {

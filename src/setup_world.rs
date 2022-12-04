@@ -4,13 +4,11 @@ pub(crate) mod setup_objects{
     use rand::prelude::*;
 
     #[cfg(feature="use-ray-tracing")]
-    use bevy::render::camera::CameraRenderGraph;
-    #[cfg(feature="use-ray-tracing")]
     use bevy_hikari::HikariSettings;
 
     use smooth_bevy_cameras::{LookTransform, LookTransformBundle, Smoother};
 
-    const WORLD_SIZE:f32 = 100.0;
+    const WORLD_SIZE:f32 = 300.0;
 
     #[derive(Component)]
     pub(crate) struct Moving;

@@ -11,7 +11,7 @@ pub(crate) mod movement {
 
     pub(crate) fn controls (
             time: Res<Time>,
-            mut query: Query<(&mut setup_world::setup_objects::ControllingButWithInfo, &mut Velocity, Entity), With<setup_world::setup_objects::Controlling>>,
+            mut query: Query<(&mut setup_world::setup_objects::ControllingButWithInfo, &mut Velocity, Entity, &mut Transform), With<setup_world::setup_objects::Controlling>>,
             keyboard_input: Res<Input<KeyCode>>,
             mut motion_evr: EventReader<MouseMotion>,
             axes: Res<Axis<GamepadAxis>>,
@@ -23,7 +23,12 @@ pub(crate) mod movement {
             asset_server: Res<AssetServer>,
             ){
 
-        for  (mut player_info, mut velocity, entity) in &mut query{
+        for  (mut player_info, mut velocity, entity, mut transform) in &mut query{
+
+            if transform.translation.y <= -100.0 {
+                transform.translation = Vec3::new(0.0, 5.5, 0.0);
+            }
+
             // slowing down
             velocity.linvel.x = velocity.linvel.x/2.0;
             velocity.linvel.z = velocity.linvel.z/2.0;
