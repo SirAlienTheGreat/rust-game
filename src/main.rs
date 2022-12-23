@@ -31,6 +31,7 @@ fn main() {
             .add_before::<bevy::asset::AssetPlugin, _>(EmbeddedAssetPlugin),)
         //.add_plugin(PbrPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .insert_resource(ClearColor(Color::rgb(0.,0.,0.)))
         //.add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(LookTransformPlugin)
         .add_system(move_camera_system)
@@ -58,9 +59,7 @@ fn main() {
         .add_startup_system(start_background_audio);
 
     #[cfg(feature="use-ray-tracing")]
-    {app.add_plugin(HikariPlugin {
-        remove_main_pass: true,
-    });}
+    {app.add_plugin(HikariPlugin);}
 
     app.run();
 }
