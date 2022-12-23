@@ -91,7 +91,7 @@ pub(crate) mod decomp_caching {
     }
 
     fn add_to_cache(item:RenderedDecomp, current_cache:&mut Vec<RenderedDecomp>){
-        let path = Path::new("assets/cache.bin");
+        let path = Path::new("cache.bin");
         let display = path.display();
 
         // Add the new item to the cache
@@ -151,7 +151,7 @@ pub(crate) mod decomp_caching {
         let mut local_cache;
         println!("checking local cache");
 
-        let path = Path::new("assets/cache.bin");
+        let path = Path::new("cache.bin");
         let display = path.display();
 
         // Open the path in read-only mode, returns `io::Result<File>`
