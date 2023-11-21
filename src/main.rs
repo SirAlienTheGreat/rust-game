@@ -28,7 +28,6 @@ fn main() {
         .add_plugins(LookTransformPlugin)
         
         .insert_resource(ClearColor(Color::rgb(0.,0.,0.)))
-        .insert_resource(TimesLoaded{times:0})
         
         
         .add_systems(Startup, setup_world::setup_objects::setup)
@@ -53,7 +52,7 @@ fn main() {
             Update,
             (
                 //skyboxv2::skyboxv2::cycle_cubemap_asset,
-                skyboxv2::skyboxv2::asset_loaded.after(skyboxv2::skyboxv2::cycle_cubemap_asset),
+                skyboxv2::skyboxv2::asset_loaded,
                 //skyboxv2::skyboxv2::camera_controller,
                 //skyboxv2::skyboxv2::animate_light_direction,
             ),
@@ -128,7 +127,7 @@ fn cursor_grab_system(
     mouse: Res<Input<MouseButton>>,
     key: Res<Input<KeyCode>>,
 ) {
-    let mut window = windows.get_single_mut();
+    let window = windows.get_single_mut();
     match window {
         Ok(mut window) =>{
             if mouse.just_pressed(MouseButton::Left) {
@@ -154,12 +153,6 @@ fn cursor_grab_system(
 
 #[derive(Component)]
 struct MakeHitboxes;
-
-/// The system needs to load meshes multiple times to fix a bug in rapier
-#[derive(Resource)]
-struct TimesLoaded{
-    times:i32
-}
 
 fn spawn_gltf_objects(
     mut commands: Commands,
@@ -243,7 +236,7 @@ fn move_scene_entities(
                     //commands.entity(entity).insert(decomposition);
 
                     //println!("removing entity {:?}",moved_scene_entity.id());
-                    let x = commands.entity(moved_scene_entity.clone());
+                    //let x = commands.entity(moved_scene_entity.clone());
                     commands.entity(moved_scene_entity.clone()).remove::<MakeHitboxes>();
                 }
                 

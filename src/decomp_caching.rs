@@ -4,7 +4,6 @@ pub(crate) mod decomp_caching {
     #[cfg(feature="check-local-cache")]
     use std::io::Read;
     use bevy::prelude::Vec3;
-    use bevy::utils::default;
     use serde::{Serialize, Deserialize};
     use bevy_rapier3d::rapier::prelude::SharedShape;
     use bevy_rapier3d::geometry::Collider;
