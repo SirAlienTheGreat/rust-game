@@ -1,74 +1,98 @@
-use bevy::{prelude::*, window::{PresentMode, CursorGrabMode}};
-#[cfg(feature="use-ray-tracing")]
-use bevy_hikari::HikariPlugin;
+use bevy::{prelude::*, window::CursorGrabMode};
+use bevy_kira_audio::{AudioControl, AudioPlugin};
 use smooth_bevy_cameras::{LookTransform, LookTransformPlugin};
 use bevy_rapier3d::prelude::*;
-use bevy_embedded_assets::EmbeddedAssetPlugin;
-use bevy_kira_audio::prelude::*;
+use std::env;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod decomp_caching;
 mod setup_world;
 mod movement;
-mod skybox;
-
+mod skyboxv2;
 
 fn main() {
-    static CREATING_OBJECTS:&str = "creating-objects";
+    let args: Vec<String> = env::args().collect();
+    let conf = CliArgs {
+        hitboxes: args.contains(&"hitboxes".to_string()),
+        show_fps: args.contains(&"show_fps".to_string()) || args.contains(&"fps".to_string()),
+        debug: args.contains(&"debug".to_string()),
+    };
+
 
     let mut app = App::new();
 
-    app .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
-        .add_plugins(DefaultPlugins.set(WindowPlugin{
-            window: WindowDescriptor {
-                title: "Rust is the future of programming!".to_string(),
-                width: 1920.,
-                height: 1080.,
-                present_mode: PresentMode::AutoVsync,
-                ..default()
-            },
-            ..default()
-        })  .build()
-            .add_before::<bevy::asset::AssetPlugin, _>(EmbeddedAssetPlugin),)
-        //.add_plugin(PbrPlugin)
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+    app 
+        .add_plugins(DefaultPlugins)
+        .add_plugins(AudioPlugin)
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugins(LookTransformPlugin)
+        
         .insert_resource(ClearColor(Color::rgb(0.,0.,0.)))
-        //.add_plugin(RapierDebugRenderPlugin::default())
-        .add_plugin(LookTransformPlugin)
-        .add_system(move_camera_system)
-        .add_system(doing_the_wave)
-        //.add_system(gamepad)
-        .add_system(movement::movement::gamepad_connections)
-        .add_system(movement::movement::controls)
-        .add_system(cursor_grab_system)
+        .insert_resource(TimesLoaded{times:0})
+        
+        
+        .add_systems(Startup, setup_world::setup_objects::setup)
+        .add_systems(Startup, spawn_gltf_objects)
+        .add_systems(Startup, start_background_audio)
 
-        .add_startup_stage(CREATING_OBJECTS, SystemStage::single_threaded())
-        .add_startup_system_to_stage(CREATING_OBJECTS, setup_world::setup_objects::setup)
-        .add_startup_system_to_stage(CREATING_OBJECTS, spawn_gltf_objects)
-        .add_system(setup_world::setup_objects::point_things_at_player)
+        
+        .add_systems(Update, doing_the_wave)
+        .add_systems(Update, movement::movement::gamepad_connections)
+        .add_systems(Update, movement::movement::controls)
+        .add_systems(Update, move_camera_system)
 
-        .add_system(move_scene_entities)
+        
+        .add_systems(Update, setup_world::setup_objects::point_things_at_player)
 
-        .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
-        .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
+        .add_systems(Update, move_scene_entities)
 
-        .add_plugin(MaterialPlugin::<skybox::skybox::CubemapMaterial>::default())
-        .add_startup_system(skybox::skybox::setup_cubebox)
-        .add_system(skybox::skybox::cycle_cubemap_asset)
-        .add_system(skybox::skybox::asset_loaded.after(skybox::skybox::cycle_cubemap_asset))
-        .add_plugin(AudioPlugin)
-        .add_startup_system(start_background_audio);
+        .add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default())
+        
+        
+        .add_systems(
+            Update,
+            (
+                //skyboxv2::skyboxv2::cycle_cubemap_asset,
+                skyboxv2::skyboxv2::asset_loaded.after(skyboxv2::skyboxv2::cycle_cubemap_asset),
+                //skyboxv2::skyboxv2::camera_controller,
+                //skyboxv2::skyboxv2::animate_light_direction,
+            ),
+        );
+        
 
-    #[cfg(feature="use-ray-tracing")]
-    {app.add_plugin(HikariPlugin);}
+        //.add_plugins(MaterialPlugin::<skybox::skybox::CubemapMaterial>::default())
+        //.add_systems(Startup, skybox::skybox::setup_cubebox)
+        //.add_systems(Update, skybox::skybox::cycle_cubemap_asset)
+        //.add_systems(Update, skybox::skybox::asset_loaded.after(skybox::skybox::cycle_cubemap_asset));
+
+    if conf.hitboxes{
+        app.add_plugins(RapierDebugRenderPlugin::default());
+    }
+    if conf.show_fps{
+        app.add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default());
+    }
+    if conf.debug{
+        app.add_plugins(WorldInspectorPlugin::new());
+    } else {
+        app.add_systems(Update, cursor_grab_system);
+    }
 
     app.run();
 }
 // struct that indicates that item will move as sin wave
 
 fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<bevy_kira_audio::Audio>) {
+    //bevy_kira_audio::AudioControl::play(&audio, asset_server.load("Glimpsing-Infinity-Asher-Fulero.mp3")).looped().with_volume(0.25);
     audio.play(asset_server.load("Glimpsing-Infinity-Asher-Fulero.mp3")).looped().with_volume(0.25);
+
     
     println!("playing audio")
+}
+
+struct CliArgs{
+    hitboxes:bool,
+    show_fps:bool,
+    debug:bool,
 }
 
 fn doing_the_wave(time: Res<Time>, mut query: Query<&mut Transform, With<setup_world::setup_objects::Moving>>){
@@ -85,10 +109,6 @@ fn doing_the_wave(time: Res<Time>, mut query: Query<&mut Transform, With<setup_w
     }
 }
 
-
-
-
-
 fn move_camera_system(mut cameras: Query<&mut LookTransform>, players: Query<(&mut Transform, &mut setup_world::setup_objects::ControllingButWithInfo), With<setup_world::setup_objects::Controlling>>) {
     // Later, another system will update the `Transform` and apply smoothing automatically.
     for mut c in cameras.iter_mut() {
@@ -104,31 +124,42 @@ fn move_camera_system(mut cameras: Query<&mut LookTransform>, players: Query<(&m
 
 // Cursor crab function shamelessly stolen from bevy-cheatbook.github.io
 fn cursor_grab_system(
-    mut windows: ResMut<Windows>,
-    btn: Res<Input<MouseButton>>,
+    mut windows: Query<&mut Window>,
+    mouse: Res<Input<MouseButton>>,
     key: Res<Input<KeyCode>>,
 ) {
-    let window = windows.get_primary_mut().unwrap();
-
-    if btn.just_pressed(MouseButton::Left) {
-        println!("grabbing mouse");
-        window.set_cursor_grab_mode(CursorGrabMode::Confined);
-        window.set_cursor_visibility(false);
+    let mut window = windows.get_single_mut();
+    match window {
+        Ok(mut window) =>{
+            if mouse.just_pressed(MouseButton::Left) {
+                window.cursor.visible = false;
+                window.cursor.grab_mode = CursorGrabMode::Locked;
+            }
+        
+            if key.just_pressed(KeyCode::Escape) {
+                window.cursor.visible = true;
+                window.cursor.grab_mode = CursorGrabMode::None;
+            }
+        },
+        Err(err) => println!("Grab didn't work bc of {err}")
     }
-
-    if key.just_pressed(KeyCode::Escape) {
-        println!("ungrabbing mouse");
-        window.set_cursor_grab_mode(CursorGrabMode::None);
-        window.set_cursor_visibility(true);
-    }
+    
 }
 
 
-/// set up a simple 3D scene
+
+
+
 
 
 #[derive(Component)]
 struct MakeHitboxes;
+
+/// The system needs to load meshes multiple times to fix a bug in rapier
+#[derive(Resource)]
+struct TimesLoaded{
+    times:i32
+}
 
 fn spawn_gltf_objects(
     mut commands: Commands,
@@ -141,22 +172,24 @@ fn spawn_gltf_objects(
         ..Default::default()
     };
     commands.spawn(scene).insert(MakeHitboxes)
-       .insert(Transform::from_scale(Vec3{x:0.2,y:0.2,z:0.2}).with_translation(Vec3{x:6.0,y:-50.0,z:0.0}));
+       .insert(Transform::from_scale(Vec3{x:0.2,y:0.2,z:0.2}).with_translation(Vec3{x:6.0,y:-50.0,z:0.0}))
+       .insert(Name::new("World"));
 
     /*for i in 0..1 {
-        let gltf_h2 = ass.load("claw.glb#Scene0");
+        let gltf_h2 = ass.load("claw.gltf#Scene0");
         let scene2 = SceneBundle {
             scene: gltf_h2,
             ..Default::default()
         };
-        commands.spawn_bundle(scene2).insert(MakeHitboxes)
-            .insert(Transform::from_xyz(3.0 * i as f32 - 15.0,3.0,3.0 * i as f32 - 20.0));
+        commands.spawn(scene2).insert(MakeHitboxes)
+            .insert(Transform::from_xyz(3.0 * i as f32 - 15.0,0.0,3.0 * i as f32 - 20.0));
     }*/
 }
 
 
-fn move_scene_entities(
-    moved_scene: Query<Entity, With<MakeHitboxes>>,
+
+fn move_scene_entities( 
+    mut moved_scene: Query<(Entity, &mut Transform),With<MakeHitboxes>>,
     children: Query<&Children>,
     mesh_handles: Query<&Handle<Mesh>>,
     mut commands: Commands,
@@ -165,11 +198,11 @@ fn move_scene_entities(
     if moved_scene.iter().len() >=1{
         let mut cache = decomp_caching::decomp_caching::load_cache();
         let children = children.into();
-        let mut decompositions = vec![];
+        let mut decompositions: Vec<(Entity, decomp_caching::decomp_caching::RenderedDecomp)> = vec![];
 
         
 
-        for moved_scene_entity in &moved_scene {
+        for (moved_scene_entity, _)  in &moved_scene {
             iter_hierarchy(moved_scene_entity, &children, &mut {
                 
                 |entity| {
@@ -185,7 +218,7 @@ fn move_scene_entities(
 
                 if let Ok(mesh_handle) = mesh_handles.get(entity) {
                     let mesh = assets.get(mesh_handle).expect("Couldn't get mesh from handle");
-                    
+                    info!("meshing");
 
                     let mesh_collider = Collider::from_bevy_mesh(mesh,
                         &ComputedColliderShape::TriMesh).unwrap();//ConvexDecomposition(VHACDParameters{..Default::default()})).unwrap();
@@ -199,6 +232,7 @@ fn move_scene_entities(
 
                     
 
+
                     let decomposition = decomp_caching::decomp_caching::decompose(vertices, indices.into(), &mut cache);
                     match decomposition {
                         Some(decomp) => decompositions.push((entity,decomp)),
@@ -209,7 +243,7 @@ fn move_scene_entities(
                     //commands.entity(entity).insert(decomposition);
 
                     //println!("removing entity {:?}",moved_scene_entity.id());
-
+                    let x = commands.entity(moved_scene_entity.clone());
                     commands.entity(moved_scene_entity.clone()).remove::<MakeHitboxes>();
                 }
                 
@@ -220,6 +254,14 @@ fn move_scene_entities(
         for (entity, rendered_decomp) in decompositions {
             let collider:Collider = rendered_decomp.decomp.into();
             commands.entity(entity).insert(collider);
+            
+        }
+
+        //This is a raelly horrible workaround for a glitch in Rapier
+        //When the mesh is loaded, it doesn't scale correctly until its updated
+        //So this forces an update for the object by moving it a very small amount
+        for (_, mut transform) in &mut moved_scene{
+            transform.translation.z += 0.1;
         }
     }
     

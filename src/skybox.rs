@@ -151,6 +151,28 @@ pub(crate) mod skybox {
         base_color_texture: Option<Handle<Image>>,
     }
 
+    impl bevy::reflect::TypePath for CubemapMaterial {
+        fn type_path() -> &'static str {
+            todo!()
+        }
+
+        fn type_ident() -> Option<&'static str> {
+            None
+        }
+
+        fn crate_name() -> Option<&'static str> {
+            None
+        }
+
+        fn module_path() -> Option<&'static str> {
+            None
+        }
+
+        fn short_type_path() -> &'static str {
+            todo!()
+        }
+    }
+
     impl Material for CubemapMaterial {
         fn fragment_shader() -> ShaderRef {
             "shaders/cubemap_unlit.wgsl".into()
@@ -176,7 +198,7 @@ pub(crate) mod skybox {
             render_device: &RenderDevice,
             images: &RenderAssets<Image>,
             _fallback_image: &FallbackImage,
-        ) -> Result<PreparedBindGroup<Self>, AsBindGroupError> {
+        ) -> Result<PreparedBindGroup<()>, AsBindGroupError> {
             let base_color_texture = self
                 .base_color_texture
                 .as_ref()

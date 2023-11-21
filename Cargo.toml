@@ -1,23 +1,23 @@
 [package]
 name = "rust-game"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy_rapier3d = { version = "0.19.0", features = [ "simd-stable", "debug-render", "serde-serialize", "wasm-bindgen" ] }
-bevy_kira_audio = {version = "0.13.0", features = ["mp3", "wav"]}
+bevy_rapier3d = { version = "0.22.0", features = [ "simd-stable", "debug-render", "serde-serialize", "wasm-bindgen" ] }
+bevy_kira_audio = {version = "0.17.0", features = ["mp3", "wav"]}
 rand = "0.8.5"
-smooth-bevy-cameras = "0.6.0"
+smooth-bevy-cameras = "0.9.0"
 serde = "1.0.147"
 bincode = "1.3.3"
-bevy-hikari = {version="0.3.1", optional=true}
-bevy_embedded_assets = "0.6.1"
+bevy_embedded_assets = "0.8.0"
+bevy-inspector-egui = "0.20"
 
 [dependencies.bevy]
-version = "0.9"
+version = "0.11.3"
 default-features = false
 features = [
   # Bevy functionality:
@@ -26,7 +26,7 @@ features = [
   "bevy_winit",         # Window management
   "x11",                # Linux: Support X11 windowing system
   "filesystem_watcher", # Asset hot-reloading
-  "render",             # Graphics Rendering
+  #"render",             # Graphics Rendering
 
   ## "render" actually just includes:
   ## (feel free to use just a subset of these, instead of "render")
@@ -34,6 +34,11 @@ features = [
   "bevy_core_pipeline", # Common rendering abstractions
   "bevy_pbr",           # 3D (physically-based) rendering
   "bevy_gltf",          # GLTF 3D assets format support
+
+  "ktx2",
+  "tonemapping_luts",
+  "zstd",
+  
 
   # File formats:
   "png",
@@ -49,9 +54,8 @@ features = [
 ]
 
 [features]
-dyn = ["bevy/dynamic"]
+dyn = ["bevy/dynamic_linking"]
 check-local-cache = []
-use-ray-tracing = ["dep:bevy-hikari"]
 
 [target.wasm32-unknown-unknown]
 runner = "wasm-server-runner"

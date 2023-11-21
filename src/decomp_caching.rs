@@ -43,21 +43,23 @@ pub(crate) mod decomp_caching {
                 if vertices.len() < 4 {
                     return None
                 } else if vertices.len() == 4 || check_if_flat(&vertices){
-                    println!("using convex_hull on item with {} vertices",vertices.len());
+                    info!("using convex_hull on item with {} vertices",vertices.len());
                     decomposition = Collider::convex_hull(&vertices).unwrap();
                 } else{
                     //let x = vertices.iter().map(|a|{return format!("Point A 1::{}::{}::{}::19465.17::13::A::0::0::0::1::0;", a.x, a.y, a.z)});
                     //println!("vertices: {:?}", x.collect::<String>());
-                    decomposition = Collider::convex_decomposition_with_params(&vertices, &indices, &bevy_rapier3d::prelude::VHACDParameters { concavity:0.001, max_convex_hulls:2048*10, resolution:256, ..default() });
+                    info!("using actual decomposition on item with {} vertices",vertices.len());
+                    decomposition = Collider::trimesh(vertices.clone(), indices.to_vec())
+                    //decomposition = Collider::convex_decomposition_with_params(&vertices, &indices, &bevy_rapier3d::prelude::VHACDParameters { /*concavity:0.001, max_convex_hulls:2048*10, resolution:64,*/ ..default() });
                 }
 
                 //let indeces = Box::new(indices);
                 
                 let rendered_decomp = RenderedDecomp{ vertices: vertices.to_vec(), indices:indices.into(), decomp: decomposition.raw};
-                println!("finished decomposition");
+                info!("finished decomposition");
                 add_to_cache(rendered_decomp.clone(),cache);
                 
-                println!("here");
+                
                 return Some(rendered_decomp);
             },
         };

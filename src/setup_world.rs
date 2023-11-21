@@ -32,26 +32,70 @@ pub(crate) mod setup_objects{
     pub(crate) fn setup(
         mut commands: Commands,
         mut meshes: ResMut<Assets<Mesh>>,
-        mut materials: ResMut<Assets<StandardMaterial>>) {
+        mut materials: ResMut<Assets<StandardMaterial>>,
+        asset_server: Res<AssetServer>) {
+
+        //Skybox texture
+        let skybox_handle = asset_server.load("textures/space-skybox-k.png");
+        
+        
+        //Camera
+        let eye = Vec3::default();
+        let target = Vec3::default();
+        commands.spawn(LookTransformBundle {
+            transform: LookTransform::new(eye, target, (0., 1., 0.).into()), //WARNING: probably broken (Up direction)
+            smoother: Smoother::new(0.9), // Value between 0.0 and 1.0, higher is smoother.
+        })
+        .insert((Camera3dBundle{
+            
+            camera:Camera { 
+                // HDR (needed for bloom) doesn't seem to work for WASM, so its disabled when on WASM
+                #[cfg(not(target_arch = "wasm32"))]
+                hdr: true, 
+                ..default() 
+            },
+            ..default()
+        }, BloomSettings{
+            intensity: 0.5,
+            ..default()
+        }, 
+        Name::new("Camera"),
+        bevy::core_pipeline::Skybox(skybox_handle.clone())
+        ));
+    
+        commands.insert_resource(crate::skyboxv2::skyboxv2::Cubemap {
+            is_loaded: false,
+            index: 0,
+            image_handle: skybox_handle,
+        });
+    
+
         // plane
         /*commands.spawn(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane { size: 2.0*WORLD_SIZE })),
+            mesh: meshes.add(Mesh::from(shape::Plane { size: 2.0*WORLD_SIZE, subdivisions: 0 })),
             material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
             transform: Transform::from_xyz(0.0, -0.5, 0.0),
             ..default()
         }).insert(Collider::cuboid(WORLD_SIZE, 0.1, WORLD_SIZE));*/
 
+        /*commands.spawn(Window {
+            title: "Rust is the future of programming!".to_string(),
+            present_mode: bevy::window::PresentMode::AutoVsync,
+            resolution: (1920., 1080.).into(),
+            ..Default::default()
+        });*/
+
         //walls 
         for i in [-1.0,1.0] {
             commands
                 .spawn_empty()
-                .insert(Collider::cuboid(0.1, 100.0, 100.0))
-                .insert(TransformBundle::from(Transform::from_xyz(i* WORLD_SIZE, 0.0, 0.0)));
+                .insert((Collider::cuboid(0.1, 100.0, 100.0), Name::new("Wall")))
+                .insert((TransformBundle::from(Transform::from_xyz(i* WORLD_SIZE, 0.0, 0.0)), Name::new("Wall")));
             
             commands
                 .spawn_empty()
                 .insert(Collider::cuboid(100.0, 100.0, 0.1))
-                .insert(TransformBundle::from(Transform::from_xyz(0.0, 0.0, i* WORLD_SIZE)));
+                .insert((TransformBundle::from(Transform::from_xyz(0.0, 0.0, i* WORLD_SIZE)), Name::new("Wall")));
         }
 
         // player cube
@@ -66,6 +110,7 @@ pub(crate) mod setup_objects{
             transform: Transform::from_xyz(0.0, 5.5, 0.0),
             ..default()
         })  .insert(Controlling)
+            .insert(Name::new("Player Cube"))
             .insert(ControllingButWithInfo {theta:0.0, v_theta: 0.0, has_contacts:true, has_hit_object:false, objects_hit:0})
             .insert(Collider::cuboid(0.5, 0.5, 0.5))
             .insert(RigidBody::Dynamic)
@@ -89,7 +134,7 @@ pub(crate) mod setup_objects{
                         shadows_enabled: true,
                         ..default()
                     },
-                    visibility:bevy::prelude::Visibility { is_visible: true },
+                    //visibility:bevy::prelude::Visibility { is_visible: true },
                     ..default()
                 });
             });
@@ -100,7 +145,8 @@ pub(crate) mod setup_objects{
             material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
             transform: Transform::from_xyz(0.0, 0.5, 1.5),
             ..default()
-        })  .insert(Moving)
+        })  .insert(Name::new("Sin wave cube"))
+            .insert(Moving)
             .insert(Collider::cuboid(0.25, 0.25, 0.25));
 
         // balls
@@ -137,7 +183,8 @@ pub(crate) mod setup_objects{
                     y, 
                     z),
                     ..default()
-            }).with_children(|parent|{
+            })  .insert(Name::new("Light"))
+                .with_children(|parent|{
                 parent.spawn(PointLightBundle {
                     point_light: PointLight {
                         intensity: 10.0,
@@ -176,7 +223,7 @@ pub(crate) mod setup_objects{
         commands.spawn(DirectionalLightBundle {
             directional_light: DirectionalLight {
                 // Configure the projection to better fit the scene
-                shadow_projection: OrthographicProjection {
+                /*shadow_projection: OrthographicProjection {
                     left: -WORLD_SIZE,
                     right: WORLD_SIZE,
                     bottom: -WORLD_SIZE,
@@ -184,7 +231,7 @@ pub(crate) mod setup_objects{
                     near: -10.0 * WORLD_SIZE,
                     far: 10.0 * WORLD_SIZE,
                     ..default()
-                },
+                },*/
                 illuminance: 80.0,
                 shadows_enabled: true,
                 ..default()
@@ -195,7 +242,7 @@ pub(crate) mod setup_objects{
                 ..default()
             },
             ..default()
-        });
+        }).insert(Name::new("Sun"));
 
 
         //platforms 
@@ -214,7 +261,8 @@ pub(crate) mod setup_objects{
                 transform: Transform::from_xyz(init_x, 3.0 * i as f32, i as f32 * 8.0),
                 ..default()
             }) //.insert(Moving)
-                .insert(Collider::cuboid(2.5, 0.5, 2.5));
+                .insert(Collider::cuboid(2.5, 0.5, 2.5))
+                .insert(Name::new("floating platform"));
         }
 
         commands.spawn(PbrBundle {
@@ -245,30 +293,9 @@ pub(crate) mod setup_objects{
         }) //.insert(Moving)
             .insert(Collider::cuboid(9.0, 2.5, 0.5));
 
-        let eye = Vec3::default();
-        let target = Vec3::default();
+        
 
-        commands
-            .spawn(LookTransformBundle {
-                transform: LookTransform::new(eye, target),
-                smoother: Smoother::new(0.9), // Value between 0.0 and 1.0, higher is smoother.
-            })
-            .insert((Camera3dBundle{
-                
-                camera:Camera { 
-                    // HDR (needed for bloom) doesn't seem to work for WASM, so its disabled when on WASM
-                    #[cfg(not(target_arch = "wasm32"))]
-                    hdr: true, 
-                    ..default() 
-                },
-                ..default()
-            }, BloomSettings{
-                intensity: 0.5,
-                ..default()
-            },
-            #[cfg(feature="use-ray-tracing")]
-            HikariSettings::default(),
-            ));
+        
     }
 
     pub(crate) fn point_things_at_player(

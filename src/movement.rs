@@ -2,10 +2,12 @@ pub(crate) mod movement {
     const PLAYER_SPEED:f32 = 2.5;
     const DEADZONE:f32 = 0.10;
 
+    use bevy::input::gamepad::GamepadConnection;
     use bevy::input::mouse::MouseMotion;
-    use bevy::{prelude::*};
+    use bevy::prelude::*;
+    use bevy_kira_audio::AudioControl;
     use bevy_rapier3d::prelude::*;
-    use bevy_kira_audio::prelude::*;
+    //use bevy_kira_audio::prelude::*;
 
     use crate::setup_world;
 
@@ -19,8 +21,8 @@ pub(crate) mod movement {
             my_gamepad: Option<Res<MyGamepad>>,
             mut collision_events: EventReader<CollisionEvent>,
             rapier_context: Res<RapierContext>,
-            audio: Res<bevy_kira_audio::Audio>,
             asset_server: Res<AssetServer>,
+            audio: Res<bevy_kira_audio::Audio>,
             ){
 
         for  (mut player_info, mut velocity, entity, mut transform) in &mut query{
@@ -222,7 +224,7 @@ pub(crate) mod movement {
 
             // Fast fall
 
-            if keyboard_input.pressed(KeyCode::LShift) && player_info.objects_hit <=1{
+            if keyboard_input.pressed(KeyCode::ShiftLeft) && player_info.objects_hit <=1{
                 velocity.linvel.y = -30.0;
             }
 
@@ -296,13 +298,13 @@ pub(crate) mod movement {
     pub(crate) fn gamepad_connections(
         mut commands: Commands,
         my_gamepad: Option<Res<MyGamepad>>,
-        mut gamepad_evr: EventReader<GamepadEvent>,
+        mut gamepad_connection_events: EventReader<bevy::input::gamepad::GamepadConnectionEvent>,
     ) {
-        for ev in gamepad_evr.iter() {
+        for ev in gamepad_connection_events.iter() {
             // the ID of the gamepad
             let id = ev.gamepad;
-            match &ev.event_type {
-                GamepadEventType::Connected(info) => {
+            match &ev.connection {
+                GamepadConnection::Connected(info) => {
                     println!("New gamepad connected with ID: {:?}, name: {}", id, info.name);
     
                     // if we don't have any gamepad yet, use this one
@@ -310,7 +312,7 @@ pub(crate) mod movement {
                         commands.insert_resource(MyGamepad(id));
                     }
                 }
-                GamepadEventType::Disconnected => {
+                GamepadConnection::Disconnected => {
                     println!("Lost gamepad connection with ID: {:?}", id);
     
                     // if it's the one we previously associated with the player,
@@ -321,11 +323,11 @@ pub(crate) mod movement {
                         }
                     }
                 }
-                // other events are irrelevant
-                _ => {}
             }
         }
     }
+    
+    
     
 
 }
