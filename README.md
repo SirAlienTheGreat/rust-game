@@ -5,6 +5,8 @@ Game built for STEM Seminar to demonstrate the power of the Rust programming lan
   1. Download the latest release for your platform from the releases page on the right-hand side.
   2. Extract the archive using 7zip or equivalent program.
   3. Double click on the binary (.exe) for your platform.
+
+Note: On some modern Wayland Systems, if you encounter troubles, try setting this environmental variable: `WINIT_UNIX_BACKEND=x11`
   
 # Controls
 ```
